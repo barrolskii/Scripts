@@ -1,0 +1,12 @@
+#!/bin/sh
+
+[ -z $1 ] && echo "Please supply a blog title" && return
+
+cp $TEMPLATES/blogTemplate.html $1.html
+
+# %^b prints shorthand month capitalise. eg MAY
+fmt_date="$(date '+%^b. %d, %Y')"
+curr_date="$(date '+%d-%m-%Y')"
+
+sed -i "s/<time>/<time datetime=\"$curr_date\">$fmt_date/" $1.html
+
