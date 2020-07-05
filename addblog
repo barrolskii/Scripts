@@ -2,6 +2,7 @@
 
 add_month()
 {
+	# This could probably be cleaner
 	EXPR="a \\\n\t\t\t<h2>${MONTH} ${YEAR}<\/h2>\n\t\t\t<ul>\n\t\t\t<\/ul>"
 
 	sed -i "/<\/p>/${EXPR}" $BLOG
@@ -10,9 +11,11 @@ add_month()
 add_blog_post()
 {
 	CURR_DATE=$(date "+%d\/%m\/%Y")
-	EXPR="\n\t\t\t\t<li>${CURR_DATE} - <a href=\"blogs\/$1\"><\/a>$2<\/li>"
 
-	sed -zi "s/<ul>/&${EXPR}/1" $BLOG
+	# This could also be better but it works for now
+	EXPR="<ul>\n\t\t\t\t<li>${CURR_DATE} - <a href=\"blogs\/$1\">$2<\/a><\/li>"
+
+	sed -i "0,/<ul>/s//${EXPR}/" $BLOG
 }
 
 # Print an error and exit the script if no file or title is passed
@@ -24,7 +27,7 @@ MONTH=$(date "+%b")
 YEAR=$(date "+%Y")
 
 
-BLOG="blog-index.html"
+BLOG="$HOME/Dev/Web/barrolskii.github.io/blog-index.html"
 
 
 # Add the current month and year to the list if it's not already there
@@ -33,4 +36,3 @@ if ! grep -q "${MONTH} ${YEAR}" $BLOG; then
 fi
 
 add_blog_post $1 "$2"
-
