@@ -1,0 +1,15 @@
+#!/bin/sh
+
+BAT_PATH="/sys/class/power_supply/BAT0"
+
+CAPACITY=$(cat ${BAT_PATH}/capacity)
+STATUS=$(cat ${BAT_PATH}/status)
+
+case $STATUS in
+	"Full") 		STATUS="F:";;
+	"Charging") 	STATUS="Chr:";;
+	"Discharging") 	STATUS="";;
+esac
+
+printf "%s%s%%\n" $STATUS $CAPACITY
+
