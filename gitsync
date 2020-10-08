@@ -1,0 +1,27 @@
+#!/bin/sh
+
+check_repo_commits()
+{
+	REPO_STATUS=$(git -C $1 status --porcelain)
+
+	if [ -z "$REPO_STATUS" ]
+	then
+		echo "${1} can be synced. Syncing now..."
+		git -C $1 pull
+		echo -e "\n"
+	else
+		echo "Unable to sync: ${1}"
+		echo "Changes must be commited or added"
+		echo -e "\n"
+	fi
+}
+
+for dir in $(find ~/Dev/ -maxdepth 2 -type d); do
+
+	# Check if the current dir is a git repo
+	[ -d "$dir/.git" ] && check_repo_commits $dir
+
+
+
+done
+
