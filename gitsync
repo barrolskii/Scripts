@@ -3,15 +3,18 @@
 check_repo_commits()
 {
 	REPO_STATUS=$(git -C $1 status --porcelain)
+	RESET='\033[0m'
+	GREEN='\033[0;32m'
+	RED='\033[0;31m'
 
 	if [ -z "$REPO_STATUS" ]
 	then
-		echo "${1} can be synced. Syncing now..."
+		echo -e "${GREEN}${1} can be synced. Syncing now...${RESET}"
 		git -C $1 pull
 		echo -e "\n"
 	else
-		echo "Unable to sync: ${1}"
-		echo "Changes must be commited or added"
+		echo -e "${RED}Unable to sync: ${1}"
+		echo -e "Changes must be commited or added${RESET}"
 		echo -e "\n"
 	fi
 }
