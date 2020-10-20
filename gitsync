@@ -23,8 +23,5 @@ for dir in $(find ~/Dev/ -maxdepth 2 -type d); do
 
 	# Check if the current dir is a git repo
 	[ -d "$dir/.git" ] && check_repo_commits $dir
-
-
-
 done
 
