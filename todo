@@ -1,0 +1,4 @@
+#!/bin/sh
+
+grep --color -n -T -R --exclude-dir={.git,craftinginterpreters,imgui,Scripts,doom} "TODO" ${HOME}/Dev/
+
