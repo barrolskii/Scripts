@@ -27,7 +27,7 @@ MONTH=$(date "+%b")
 YEAR=$(date "+%Y")
 
 
-BLOG="$HOME/Dev/Web/barrolskii.github.io/blog-index.html"
+BLOG="$HOME/Dev/Web/barrolskii.github.io/blog.html"
 
 
 # Add the current month and year to the list if it's not already there

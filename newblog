@@ -4,7 +4,7 @@
 
 cp $TEMPLATES/blogTemplate.html $1.html
 
-# %^b prints shorthand month capitalise. eg MAY
+# %^b prints shorthand month capitalised eg. MAY
 fmt_date="$(date '+%^b. %d, %Y')"
 curr_date="$(date '+%d-%m-%Y')"
 
