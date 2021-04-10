@@ -1,0 +1,135 @@
+#!/bin/python
+
+import sys
+import re
+
+keywords = [
+    "auto",
+    "char",
+    "const",
+    "double",
+    "enum",
+    "extern",
+    "float",
+    "int",
+    "long",
+    "register",
+    "short",
+    "signed",
+    "static",
+    "struct",
+    "typedef",
+    "union",
+    "unsigned",
+    "void",
+    "volatile",
+]
+
+statements = [
+    "break",
+    "case",
+    "continue",
+    "default",
+    "do",
+    "else",
+    "for",
+    "goto",
+    "if",
+    "return",
+    "sizeof",
+    "switch",
+    "while",
+]
+
+# Boolean flag to let us know if we are within the contents of a pre tag
+flag = False
+
+# Flag to check if we are in a multiline comment
+in_comment = False
+
+# Check if a file was passed in
+if len(sys.argv) == 1:
+    print("Please supply a file to format")
+    exit()
+
+# Error if more than one file is passed at the same time
+# Might be worth allowing multiple files to be formatted
+if len(sys.argv) > 2:
+    print("Currently only one file can be formatted at a time")
+    exit()
+
+# First load in the file we want to replace
+with open(sys.argv[1], 'r+') as f:
+    file_source = f.read().splitlines()
+
+
+    # Loop through each line of the file
+    for x in range(len(file_source)):
+
+        # Check if the current line contains the starting <pre> tag
+        if '<pre>' in file_source[x]:
+            flag = True
+            continue
+
+        # Check if the current line contains the closing </pre> tag
+        if '</pre>' in file_source[x]:
+            flag = False
+            continue
+
+        # We only want to format keywords when we are within a set of pre tags
+        if flag:
+
+            # Check if we are in a multiline comment before anything else
+            if in_comment:
+                if re.search("\\*\\/", file_source[x]):
+                    file_source[x] = file_source[x]+'</span>'
+                    in_comment = False
+                else:
+                    continue
+
+
+            # Check if we are in a multiline comment
+            if re.search("\\/\\*", file_source[x]):
+                # Check if we're using multiline comment in a single line
+                if re.search("\\*\\/", file_source[x]):
+                    file_source[x] = '<span class="blue">'+file_source[x]+'</span>'
+                    continue
+                else:
+                    file_source[x] = '<span class="blue">'+file_source[x]
+                    in_comment = True
+
+            # Loop through each keyword
+            for word in keywords:
+                if re.search("\\b"+word+"\\b", file_source[x]):
+                    file_source[x] = file_source[x].replace(word, '<span class="green">'+word+'</span>')
+
+            # Loop through each statement and format it
+            for word in statements:
+                if re.search("\\b"+word+"\\b", file_source[x]):
+                    file_source[x] = file_source[x].replace(word, '<span class="yellow">'+word+'</span>')
+
+            # NOTE: The following without a doubt could be done better but
+            #       it works for now
+            # TODO: Refactor this!!
+            # We get a list of numbers in the line and hightlight them
+            nums = re.findall("\\b\\d+\\b", file_source[x])
+            for num in nums:
+                file_source[x] = file_source[x].replace(num, '<span class="red">'+num+'</span>')
+
+            # Check for the preprocessor macros
+            pre_proc = re.findall("^#define\\s\\w+", file_source[x])
+            if len(pre_proc) > 0:
+                file_source[x] = file_source[x].replace(pre_proc[0], '<span class="purple">'+pre_proc[0]+'</span>')
+
+            # Check for include keyword
+            if re.search("^#include", file_source[x]):
+                 file_source[x] = file_source[x].replace("#include", '<span class="purple">'+"#include"+'</span>')
+
+            # Check for single line comments
+            comment = re.findall("\\/\\/.+", file_source[x])
+            if len(comment) > 0:
+                file_source[x] = file_source[x].replace(comment[0], '<span class="blue">'+comment[0]+'</span>')
+
+    f.seek(0)
+    f.write('\n'.join(file_source))
+
