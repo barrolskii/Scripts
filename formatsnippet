@@ -3,6 +3,7 @@
 import sys
 import re
 
+# TODO: Support other languages. Also read these in from a file
 keywords = [
     "auto",
     "char",
@@ -41,95 +42,113 @@ statements = [
     "while",
 ]
 
-# Boolean flag to let us know if we are within the contents of a pre tag
-flag = False
+# Boolean to keep check if we are in a code tag to format
+b_in_code_tag = False
 
-# Flag to check if we are in a multiline comment
-in_comment = False
+def format_comment(line):
+    comment = re.findall("\\/\\/.+", line)
+    if len(comment) > 0:
+        line = line.replace(comment[0], '<span class="blue">'+comment[0]+'</span>')
 
-# Check if a file was passed in
-if len(sys.argv) == 1:
-    print("Please supply a file to format")
-    exit()
+    comment = re.findall("\\/\\*.+\\*\\/", line)
+    if len(comment) > 0:
+        line = line.replace(comment[0], '<span class="blue">'+comment[0]+'</span>')
 
-# Error if more than one file is passed at the same time
-# Might be worth allowing multiple files to be formatted
-if len(sys.argv) > 2:
-    print("Currently only one file can be formatted at a time")
-    exit()
+    return line
 
-# First load in the file we want to replace
-with open(sys.argv[1], 'r+') as f:
-    file_source = f.read().splitlines()
+def format_multiline_comment(line):
 
+    if re.search("\\/\\*$", line):
+        line = line.replace('/*', '<span class="blue">/*')
 
-    # Loop through each line of the file
-    for x in range(len(file_source)):
+    if re.search("\\*\\/$", line):
+        line = line.replace('*/', '*/</span>')
 
-        # Check if the current line contains the starting <pre> tag
-        if '<pre>' in file_source[x]:
-            flag = True
-            continue
-
-        # Check if the current line contains the closing </pre> tag
-        if '</pre>' in file_source[x]:
-            flag = False
-            continue
-
-        # We only want to format keywords when we are within a set of pre tags
-        if flag:
-
-            # Check if we are in a multiline comment before anything else
-            if in_comment:
-                if re.search("\\*\\/", file_source[x]):
-                    file_source[x] = file_source[x]+'</span>'
-                    in_comment = False
-                else:
-                    continue
+    return line
 
 
-            # Check if we are in a multiline comment
-            if re.search("\\/\\*", file_source[x]):
-                # Check if we're using multiline comment in a single line
-                if re.search("\\*\\/", file_source[x]):
-                    file_source[x] = '<span class="blue">'+file_source[x]+'</span>'
-                    continue
-                else:
-                    file_source[x] = '<span class="blue">'+file_source[x]
-                    in_comment = True
+def format_numbers(line):
+    nums = re.findall("\\b[-+]?[\\d.]+(?:[eE][-+]?\\d+)?[f]?\\b", line)
+    for num in nums:
+        line = line.replace(num, '<span class="red">'+num+'</span>')
 
-            # Loop through each keyword
-            for word in keywords:
-                if re.search("\\b"+word+"\\b", file_source[x]):
-                    file_source[x] = file_source[x].replace(word, '<span class="green">'+word+'</span>')
+    return line
 
-            # Loop through each statement and format it
-            for word in statements:
-                if re.search("\\b"+word+"\\b", file_source[x]):
-                    file_source[x] = file_source[x].replace(word, '<span class="yellow">'+word+'</span>')
+def format_string(line):
+    strings = re.findall("[\"'].+[\"']", line)
+    for string in strings:
+        line = line.replace(string, '<span class=red>'+string+'</span>')
+    return line
 
-            # NOTE: The following without a doubt could be done better but
-            #       it works for now
-            # TODO: Refactor this!!
-            # We get a list of numbers in the line and hightlight them
-            nums = re.findall("\\b\\d+\\b", file_source[x])
-            for num in nums:
-                file_source[x] = file_source[x].replace(num, '<span class="red">'+num+'</span>')
+def format_keywords(line):
+    global keywords
 
-            # Check for the preprocessor macros
-            pre_proc = re.findall("^#define\\s\\w+", file_source[x])
-            if len(pre_proc) > 0:
-                file_source[x] = file_source[x].replace(pre_proc[0], '<span class="purple">'+pre_proc[0]+'</span>')
+    for word in keywords:
+        if re.search("\\b"+word+"\\b", line):
+            line = line.replace(word, '<span class="green">'+word+'</span>')
 
-            # Check for include keyword
-            if re.search("^#include", file_source[x]):
-                 file_source[x] = file_source[x].replace("#include", '<span class="purple">'+"#include"+'</span>')
+    return line
 
-            # Check for single line comments
-            comment = re.findall("\\/\\/.+", file_source[x])
-            if len(comment) > 0:
-                file_source[x] = file_source[x].replace(comment[0], '<span class="blue">'+comment[0]+'</span>')
+def format_statements(line):
+    global statements
 
-    f.seek(0)
-    f.write('\n'.join(file_source))
+    for word in statements:
+        if re.search("\\b"+word+"\\b", line):
+            line = line.replace(word, '<span class="yellow">'+word+'</span>')
 
+    return line
+
+def format_includes(line):
+    if re.search("#include", line):
+        line = line.replace("#include", '<span class="purple">'+"#include"+'</span>')
+
+    return line
+
+def format_macros(line):
+    pre_proc = re.findall("#define\\s\\w+", line)
+    if len(pre_proc) > 0:
+        line = line.replace(pre_proc[0], '<span class="purple">'+pre_proc[0]+'</span>')
+
+    return line
+
+def main():
+
+    if len(sys.argv) == 1:
+        print("Please supply a file to format")
+        exit()
+
+    # TODO: Add support for more than one file
+    if len(sys.argv) > 2:
+        print("Only one file can be formatted at a time")
+        exit()
+
+    with open(sys.argv[1], 'r+') as f:
+        file_source = f.read().splitlines()
+
+        global b_in_code_tag
+
+        # Loop through each line of the file
+        for line in range(len(file_source)):
+
+            if "<code" in file_source[line]:
+                b_in_code_tag = True
+
+
+            if b_in_code_tag:
+                file_source[line] = format_string(file_source[line])
+                file_source[line] = format_numbers(file_source[line])
+                file_source[line] = format_keywords(file_source[line])
+                file_source[line] = format_statements(file_source[line])
+                file_source[line] = format_includes(file_source[line])
+                file_source[line] = format_macros(file_source[line])
+                file_source[line] = format_comment(file_source[line])
+                file_source[line] = format_multiline_comment(file_source[line])
+
+            if "</code>" in file_source[line]:
+                b_in_code_tag = False
+
+        f.seek(0)
+        f.write('\n'.join(file_source))
+        f.close()
+
+main()
