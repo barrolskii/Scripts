@@ -5,7 +5,7 @@ add_month()
 	# This could probably be cleaner
 	EXPR="a \\\n\t\t\t<h2>${MONTH} ${YEAR}<\/h2>\n\t\t\t<ul>\n\t\t\t<\/ul>"
 
-	sed -i "/<\/p>/${EXPR}" $BLOG
+	sed -i "/<\/h1>/${EXPR}" $BLOG
 }
 
 add_blog_post()
@@ -28,7 +28,6 @@ YEAR=$(date "+%Y")
 
 
 BLOG="$HOME/Dev/Web/barrolskii.github.io/blog.html"
-
 
 # Add the current month and year to the list if it's not already there
 if ! grep -q "${MONTH} ${YEAR}" $BLOG; then
