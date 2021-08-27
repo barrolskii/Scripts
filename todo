@@ -1,8 +1,8 @@
 #!/bin/sh
 
 if [ -z $1 ]; then
-	grep --color -nTR --exclude-dir={.git} "TODO" ${HOME}/Dev/
+	grep --color -nTR --exclude-dir={.git,imgui,doom} "TODO" ${HOME}/Dev/
 else
-	grep --color -nTR --exclude-dir={.git,imgui,doom} "TODO" $1
+	grep --color -nTR --exclude-dir={.git} "TODO" $1
 fi
 
