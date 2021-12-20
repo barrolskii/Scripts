@@ -1,0 +1,7 @@
+#!/bin/sh
+
+network=$(nmcli device wifi list | sed -n '1!p' | cut -b 9- | dmenu -p "Select network" -l 20 | cut -d' ' -f1)
+
+read -s pswd
+
+nmcli device wifi connect $network password $pswd
