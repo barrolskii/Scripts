@@ -1,37 +1,44 @@
-#!/bin/sh
+#!/bin/python
 
-add_month()
-{
-	# This could probably be cleaner
-	EXPR="a \\\n\t\t\t<h2>${MONTH} ${YEAR}<\/h2>\n\t\t\t<ul>\n\t\t\t<\/ul>"
+from sys import argv
+from re import search
+from os import environ
 
-	sed -i "/<\/h1>/${EXPR}" $BLOG
-}
+def main():
+    if len(argv) < 3:
+        print("Error: Expected file and title arguments")
+        exit(1)
 
-add_blog_post()
-{
-	CURR_DATE=$(date "+%d\/%m\/%Y")
+    file = argv[1]
+    title = argv[2]
+    date = ""
 
-	# This could also be better but it works for now
-	EXPR="<ul>\n\t\t\t\t<li>${CURR_DATE} - <a href=\"blogs\/$1\">$2<\/a><\/li>"
-
-	sed -i "0,/<ul>/s//${EXPR}/" $BLOG
-}
-
-# Print an error and exit the script if no file or title is passed
-[ -z $1 ] && echo "Missing file to add" && exit
-[ -z "$2" ] && echo "Missing title" && exit
+    with open(file, "r") as f:
+        contents = f.read()
+        date = search("\w\w\w \d\d, \d\d\d\d", contents).group()
 
 
-MONTH=$(date "+%b")
-YEAR=$(date "+%Y")
+    new_post = [
+        "  <li>\n",
+        "    <span class=\"list__title--small\">\n",
+        "      <a href=\"./blogs/{FILE}\">{TITLE}</a>\n".format(FILE=file, TITLE=title),
+        "      <time class=\"pull-right hidden-tablet\">{DATE}</time>\n".format(DATE=date),
+        "    </span>\n",
+        "  </li>\n",
+    ]
 
+    with open(environ['HOME'] + "/Dev/Web/barrolskii.github.io/blogindex.html", "r+") as f:
+        contents = f.readlines()
 
-BLOG="$HOME/Dev/Web/barrolskii.github.io/blog.html"
+        for i in range(len(contents)):
+            if '<ul class="posts">' in contents[i]:
+                i += 1
+                for j in range(len(new_post)):
+                    contents.insert(i + j, new_post[j])
+                break
 
-# Add the current month and year to the list if it's not already there
-if ! grep -q "${MONTH} ${YEAR}" $BLOG; then
-	add_month
-fi
+        f.seek(0, 0)
+        f.write("".join(contents))
 
-add_blog_post $1 "$2"
+if __name__ == '__main__':
+    main()

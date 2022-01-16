@@ -1,0 +1,87 @@
+#!/bin/python
+
+from sys import argv
+from os import listdir, environ
+from re import search
+from datetime import datetime
+
+def main():
+
+    if len(argv) < 2:
+        print("Expected blog directory")
+        exit(1)
+
+    files = []
+    date = ""
+    desc = ""
+    title = ""
+
+    for file in listdir(argv[1]):
+        with open(argv[1] + file) as f:
+            data = f.readlines()
+
+            for i in range(len(data)):
+                if '<p>' in data[i]:
+                    i += 1
+                    while '</p>' not in data[i]:
+                        desc += data[i]
+                        i += 1
+                    break
+
+
+            date = search("\w\w\w \d\d, \d\d\d\d", "".join(data)).group()
+            title = search(">.+</h2>", "".join(data)).group()[1:-5]
+
+            files.append([date, title, file, desc])
+            desc = ""
+
+    files.sort(key=lambda d: datetime.strptime(d[0], '%b %d, %Y'))
+
+    with open(environ['HOME'] + "/Dev/Web/barrolskii.github.io/index.html", "r+") as f:
+        contents = f.readlines();
+
+        count = len(contents)
+        list_index = 0
+
+        # Clear previous posts
+        for i in range(count):
+            if '<div class="post-list">' in contents[i]:
+                list_index = i
+                i += 1
+                while '</div> <!-- post-list -->' not in contents[i]:
+                    del contents[i]
+                break
+
+        if len(files) > 5:
+            max_posts = 5
+        else:
+            max_posts = len(files)
+
+
+        for i in range(max_posts):
+
+            # Post template
+            new_post = [
+                "  <div class=\"post-list__item\">\n",
+                "    <span class=\"item__title--big\">\n",
+                "      <a href=\"blogs/{FILE}\">\n".format(FILE=files[i][2]),
+                "      {TITLE}\n".format(TITLE=files[i][1]),
+                "      </a>\n",
+                "    </span>\n",
+                "    <span class=\"item__date\">{DATE}</span>\n".format(DATE=files[i][0]),
+                "      <span>\n",
+                "      {DESC}...\n".format(DESC=files[i][3][:375]),
+                "      </span>\n",
+                "    <a href=\"blogs/{FILE}\" class=\"read-more-symbol\">➦</a>\n".format(FILE=files[i][2]),
+                "  </div>\n\n",
+            ]
+
+            for j in range(len(new_post)):
+                contents.insert((list_index + 1) + j, new_post[j])
+
+
+            f.seek(0, 0)
+            f.write("".join(contents))
+
+if __name__ == "__main__":
+    main()
