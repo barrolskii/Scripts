@@ -1,0 +1,26 @@
+#!/bin/python
+
+from sys import argv
+import os
+
+def main():
+    if len(argv) < 2:
+        path = '.'
+    else:
+        path = argv[1]
+
+    unique_extensions = []
+    files = os.listdir(path)
+
+    for f in range(len(files)):
+        ext = os.path.splitext(files[f])[1]
+        if ext not in unique_extensions:
+            if '' == ext: continue
+
+            unique_extensions.append(ext)
+
+    for k in range(len(unique_extensions)):
+        print(unique_extensions[k])
+
+if __name__ == '__main__':
+    main()
