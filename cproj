@@ -1,4 +1,0 @@
-#!/bin/sh
-
-cp ${TEMPLATES}/template.c ./main.c
-cp ${TEMPLATES}/makefile.txt ./makefile
