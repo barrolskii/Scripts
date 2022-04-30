@@ -1,0 +1,4 @@
+#!/bin/sh
+
+# I will forget the name of this and audio is easier to remember
+pavucontrol
