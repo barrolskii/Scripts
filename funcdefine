@@ -1,81 +1,144 @@
 #!/bin/python3
 
 from sys import argv
-from re import search
+from re import findall,finditer,search
 from os.path import exists
 
-def find_function_end(lines, start_index):
-    """Finds the end of a C function"""
+def find_member_functions(src: str):
+    """
+        Gets member functions from a C++ class or struct
+        Returns a list of class functions and the source
+        code trimmed of those classes
+    """
 
-    # Counter for matching braces
-    # L brace '{' increments the count
-    # R brace '}' decrements the count
-    brace_count = 0
+    member_functions = []
 
-    # Check if the function has a brace at the end
-    # eg. void my_func() {
-    brace_count += lines[start_index].count('{')
+    while (obj := search("(class|struct) \w+( |\s)?{( |\s)?(.+\s)+( |\s)?};", src)) is not None:
+        src = src.replace(obj.group(), "")
 
-    # Move onto the next line as we've already checked if the function
-    # definition start has a '{' character
-    i = start_index + 1
-    while (i < len(lines)):
-        brace_count += lines[i].count('{')
-        brace_count -= lines[i].count('}')
+        class_name = search("(class|struct) \w+", obj.group()).group().split(' ')[1]
 
-        if brace_count == 0:
-            return i
+        # Check if the class/struct has function declarations
+        members = finditer("\w+ \w+\((.+)?\);", obj.group())
 
-        i += 1
+        for j in members:
+            str = j.group()
+
+            # Find the start of the function name
+            pos = str.find(' ')
+            member_functions.append(str[:pos] + " " + class_name + "::" + str[pos + 1:-1])
 
 
-def dump_function_definitions(file_name, functions):
+    return member_functions, src
+
+
+def find_functions(source):
+    """Gets function declarations from a C/C++ header file"""
+
+    functions = []
+    matches = finditer("(struct )?\w+ \w+\((.+)?\)", source)
+
+    for i in matches:
+        functions.append(i.group())
+
+
+    return functions
+
+
+def dump_function_definitions(file_name, member_functions, functions):
     """Creates empty definitions for all functions in a header file"""
+
+    header = file_name[:-1] + 'h'
+
+    file_source = f"#include \"{header}\"\n\n"
+
+    for i in member_functions:
+        file_source = f"{file_source}{i}\n{{\n\n}}\n\n"
+
+    for i in functions:
+        file_source = f"{file_source}{i}\n{{\n\n}}\n\n"
+
+    print(file_source)
+
     with open(file_name, "w") as f:
-        # Add the header include to the source file
-        f.write(f"#include \"{argv[1]}\"\n\n")
-
-        for i in functions:
-            f.write(i + "\n{\n\n}\n\n")
+       f.write(file_source)
 
 
-def add_function_definitions(file_name, functions):
-    """Adds function definitions to already existing C file"""
-    with open(file_name, "r+") as f:
-        # Get the contents of the file as a string so we can quickly
-        # check if the function is already defined
-        str_contents = f.read()
+def find_function_end(src, func):
+    """Finds the end of a function definition"""
 
-        # Move the file pointer back to the beginning of the file as
-        # read() leaves it at the end
-        f.seek(0)
 
-        # Read in the file line by line so we can add any new function
-        # definitions
-        lines = f.readlines()
+    src_len = len(src)
 
-        for i in range(len(functions)):
-            if functions[i] in str_contents:
-                continue
+    # Find the position of the last function that this one is behind
+    func_start = src.find(func)
+    body_start = 0 # Start of function body
+    counter    = 0 # Counter to keep track of the matches of '{' and '}' characters
+    func_end   = 0
+
+
+    # Look for the start of the function body
+    for x in range(func_start, src_len):
+        if src[x] == '{':
+            body_start = x
+            break
+
+
+    # Now look for the end of the function body
+    for x in range(body_start, src_len):
+        if src[x] == '{':
+            counter += 1
+
+        if src[x] == '}':
+            counter -= 1
+
+        if counter == 0:
+            func_end = x
+            break
+
+    return func_end
+
+
+def add_functions(src, funcs):
+    """Adds function definitions to source file"""
+
+    for i in range(len(funcs)):
+        if funcs[i] in src:
+            continue
+        else:
+            if i == 0:
+                if len(funcs) < 2:
+                    include_index = 0
+
+                    # Find the last #include preprocessor
+                    last = findall("#include .+", src)[-1]
+                    last_pos = src.find(last) + len(last)
+
+                    src = src[:last_pos] + "\n\n" + funcs[i] + "\n{\n\n}" + src[last_pos:]
+                else:
+                    start = src.find(funcs[i + 1])
+                    src = src[:start] + funcs[i] + "\n{\n\n}\n\n" + src[start:]
             else:
-                for j in range(len(lines)):
+                func_end = find_function_end(src, funcs[i - 1])
+                src = src[:func_end + 1] + "\n\n" + funcs[i] + "\n{\n\n" + src[func_end:]
 
-                    if lines[j] == '\n' or lines[j] == '{' or lines[j] == '}':
-                        continue
 
-                    if functions[i - 1] in lines[j]:
-                        func_end_index = find_function_end(lines, j)
+    return src
 
-                        lines.insert(func_end_index + 1, "\n")
-                        lines.insert(func_end_index + 2, functions[i] + "\n")
-                        lines.insert(func_end_index + 3, "{\n")
-                        lines.insert(func_end_index + 4, "\n")
-                        lines.insert(func_end_index + 5, "}\n")
-                        j = func_end_index + 5
 
-                f.seek(0)
-                for line in lines:
-                    f.write(line)
+def add_function_definitions(file_name, member_functions, functions):
+    """Adds function definitions to already existing C file"""
+
+    with open(file_name, "r+") as f:
+        src = f.read()
+
+        src = add_functions(src, member_functions)
+        src = add_functions(src, functions)
+
+        # Move the file pointer back to the beginning
+        # so we can write the new file contents
+        f.seek(0)
+        f.write(src)
 
 
 def main():
@@ -84,41 +147,26 @@ def main():
         print("Expected file")
         exit(1)
 
-    functions = []
-    c_file = (argv[1][:-1] + 'c')
+    header_file  = argv[1]
+    c_file       = (argv[1][:-1] + 'c')
+
+    with open(header_file) as hf:
+        contents = hf.read();
+
+        member_functions, contents = find_member_functions(contents)
+        functions         = find_functions(contents)
 
 
-    with open(argv[1]) as f:
-        contents = f.readlines()
-
-        for i in contents:
-            # Skip blank lines
-            if (i == '\n'):
-                continue
-
-            # See if the current line contains a function declaration
-            match = search("(struct )?\w+ \w+\((.+)?\)", i)
-
-            if match is None:
-                continue
-            else:
-                functions.append(match.group())
-
-
-        if not functions:
-            print(f"No functions found in supplied file {argv[1]}")
+        if not functions and not member_functions:
+            print(f"No functions found in supplied file {header_file}")
             exit(0)
-
 
         if not exists(c_file):
             # If the file doesn't exist it means we can just dump all
             # function declarations into it and then exit this script
-            dump_function_definitions(c_file, functions)
+            dump_function_definitions(c_file, member_functions, functions)
         else:
-            # If the file already exists then we need to scan through
-            # the file and see where the new (if any) function definitions
-            # should go
-            add_function_definitions(c_file, functions)
+            add_function_definitions(c_file, member_functions, functions)
 
 
 if __name__ == '__main__':
