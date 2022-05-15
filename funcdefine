@@ -58,8 +58,6 @@ def dump_function_definitions(file_name, member_functions, functions):
     for i in functions:
         file_source = f"{file_source}{i}\n{{\n\n}}\n\n"
 
-    print(file_source)
-
     with open(file_name, "w") as f:
        f.write(file_source)
 
