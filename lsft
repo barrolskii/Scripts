@@ -1,4 +1,5 @@
 #!/bin/python
+# Lists unique filetypes in a directory
 
 from sys import argv
 import os
