@@ -9,13 +9,20 @@ check_repo_commits()
 
 	if [ -z "$REPO_STATUS" ]
 	then
-		echo -e "${GREEN}${1} can be synced. Syncing now...${RESET}"
-		git -C $1 pull
-		echo -e "\n"
+		# If the status is empty then we get more verbose output to check if we need to sync the repo
+		REPO_STATUS=$(git -C $1 status)
+
+		if [ -z "${REPO_STATUS##*Your branch is behind*}" ]
+		then
+		   echo -e "${GREEN}${1} can be synced. Syncing now...${RESET}"
+		   git -C $1 pull --quiet
+		else
+		   echo -e "${GREEN}${1} is up to date${RESET}"
+		fi
+
 	else
 		echo -e "${RED}Unable to sync: ${1}"
-		echo -e "Changes must be commited or added${RESET}"
-		echo -e "\n"
+		echo -e "${REPO_STATUS}${RESET}"
 	fi
 }
 
