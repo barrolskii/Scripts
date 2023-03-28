@@ -6,6 +6,8 @@ RED='\033[0;31m'
 
 sync_repo()
 {
+	# Update the current refs for the repo
+	git -C $1 fetch --quiet
 	REPO_STATUS=$(git -C $1 status -uno)
 
 	if [ -z "${REPO_STATUS##*Changes not staged for commit*}" ]
