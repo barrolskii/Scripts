@@ -1,34 +1,40 @@
 #!/bin/sh
 
-check_repo_commits()
+RESET='\033[0m'
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+
+sync_repo()
 {
-	REPO_STATUS=$(git -C $1 status --porcelain)
-	RESET='\033[0m'
-	GREEN='\033[0;32m'
-	RED='\033[0;31m'
+	REPO_STATUS=$(git -C $1 status -uno)
 
-	if [ -z "$REPO_STATUS" ]
+	if [ -z "${REPO_STATUS##*Changes not staged for commit*}" ]
 	then
-		# If the status is empty then we get more verbose output to check if we need to sync the repo
-		REPO_STATUS=$(git -C $1 status)
-
-		if [ -z "${REPO_STATUS##*Your branch is behind*}" ]
-		then
-		   echo -e "${GREEN}${1} can be synced. Syncing now...${RESET}"
-		   git -C $1 pull --quiet
-		else
-		   echo -e "${GREEN}${1} is up to date${RESET}"
-		fi
-
-	else
-		echo -e "${RED}Unable to sync: ${1}"
-		echo -e "${REPO_STATUS}${RESET}"
+		echo -e "${RED}${1} has pending changes${RESET}"
+		echo -e "${RED}$(git -C $1 diff --name-only)${RESET}"
+		return
 	fi
+
+
+	if [ -z "${REPO_STATUS##*No commits yet*}" ]
+	then
+		echo -e "${GREEN}${1} has no commits. Nothing to pull${RESET}"
+		return
+	fi
+
+	if [ -z "${REPO_STATUS##*Your branch is up to date*}" ]
+	then
+		echo -e "${GREEN}${1} is up to date${RESET}"
+		return
+	fi
+
+	echo -e "${GREEN}${1} can be synced. Syncing now...${RESET}"
+	git -C $1 pull --quiet
 }
 
 for dir in $(find ~/Dev/ -maxdepth 2 -type d); do
 
 	# Check if the current dir is a git repo
-	[ -d "$dir/.git" ] && check_repo_commits $dir
+	[ -d "$dir/.git" ] && sync_repo $dir
 done
 
